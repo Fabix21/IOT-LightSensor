@@ -3,11 +3,10 @@
 #include <PubSubClient.h>
 #include <BH1750.h>
 #include <Arduino.h>
-
+#include <WifiManager.h>
 #define wifi_ssid ""
 #define wifi_password ""
 
-#define mqtt_server ""
 #define mqtt_user ""
 #define mqtt_password ""
 
@@ -15,6 +14,9 @@
 #define lightbub_switch_power "cmnd/light/POWER"
 
 #define maxLuxValue 100
+
+const char* mqtt_server = "192.168.0.175";
+const char* mqtt_port = "1883";
 BH1750 lightMeter;
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -25,8 +27,25 @@ void setup() {
   Serial.begin(115200);
   Wire.begin();
   lightMeter.begin();
-  setup_wifi();
-  client.setServer(mqtt_server, 1883);
+  //setup_wifi();
+  WiFiManager wifiManager;
+  wifiManager.resetSettings();
+  WiFiManagerParameter custom_mqtt_server("server", "mqtt server adress", mqtt_server, 40);
+  wifiManager.addParameter(&custom_mqtt_server);
+
+  WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 40);
+  wifiManager.addParameter(&custom_mqtt_port);
+  wifiManager.autoConnect("IOT Light Sensor");
+
+  mqtt_server = custom_mqtt_server.getValue();
+  mqtt_port = custom_mqtt_port.getValue();
+  int mqttPortInt = atol(mqtt_port);
+ 
+  client.setServer(mqtt_server, mqttPortInt);
+  Serial.print("mqtt server: ");
+  Serial.printf(mqtt_server);
+  Serial.print(" port: ");
+  Serial.printf(mqtt_port);
 }
 
 void setup_wifi() {
@@ -51,6 +70,10 @@ void setup_wifi() {
 void reconnect() {
  
   while (!client.connected()) {
+     Serial.print("mqtt server: ");
+  Serial.printf(mqtt_server);
+  Serial.print(" port: ");
+  Serial.printf(mqtt_port);
     Serial.print("Attempting MQTT connection...");
     if (client.connect("ESP8266 with BH1750", mqtt_user, mqtt_password)) {
       Serial.println("connected");
